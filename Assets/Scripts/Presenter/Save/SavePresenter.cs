@@ -1,5 +1,6 @@
 ﻿using NoteEditor.Model;
 using NoteEditor.Utility;
+using SFB;
 using System;
 using System.IO;
 using System.Linq;
@@ -8,6 +9,8 @@ using UniRx.Triggers;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using System.Windows.Forms;
+using Button = UnityEngine.UI.Button; // MessageBox を使用するため
 
 namespace NoteEditor.Presenter
 {
@@ -41,7 +44,7 @@ namespace NoteEditor.Presenter
 
             this.UpdateAsObservable()
                 .Where(_ => Input.GetKeyDown(KeyCode.Escape))
-                .Subscribe(_ => Application.Quit());
+                .Subscribe(_ => UnityEngine.Application.Quit());
 
             var saveActionObservable = this.UpdateAsObservable()
                 .Where(_ => KeyInput.CtrlPlus(KeyCode.S))
@@ -72,7 +75,7 @@ namespace NoteEditor.Presenter
                     mustBeSaved.Value = false;
                     saveDialog.SetActive(false);
                     Save();
-                    Application.Quit();
+                    UnityEngine.Application.Quit();
                 });
 
             dialogDoNotSaveButton.AddListener(
@@ -81,7 +84,7 @@ namespace NoteEditor.Presenter
                 {
                     mustBeSaved.Value = false;
                     saveDialog.SetActive(false);
-                    Application.Quit();
+                    UnityEngine.Application.Quit();
                 });
 
             dialogCancelButton.AddListener(
@@ -91,7 +94,7 @@ namespace NoteEditor.Presenter
                     saveDialog.SetActive(false);
                 });
 
-            Application.wantsToQuit += ApplicationQuit;
+            UnityEngine.Application.wantsToQuit += ApplicationQuit;
         }
 
         bool ApplicationQuit()
@@ -108,21 +111,55 @@ namespace NoteEditor.Presenter
             return true;
         }
 
+        //public void Save()
+        //{
+        //    var fileName = Path.ChangeExtension(EditData.Name.Value, "json");
+        //    //var directoryPath = Path.Combine(Path.GetDirectoryName(MusicSelector.DirectoryPath.Value), "Notes");
+        //    string downloadPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+        //    var filePath = Path.Combine(downloadPath, fileName);
+
+        //    if (!Directory.Exists(downloadPath))
+        //    {
+        //        Directory.CreateDirectory(downloadPath);
+        //    }
+
+        //    var json = EditDataSerializer.Serialize();
+        //    File.WriteAllText(filePath, json, System.Text.Encoding.UTF8);
+        //    messageText.text = filePath + " に保存しました";
+        //}
+
         public void Save()
         {
             var fileName = Path.ChangeExtension(EditData.Name.Value, "json");
-            //var directoryPath = Path.Combine(Path.GetDirectoryName(MusicSelector.DirectoryPath.Value), "Notes");
-            string downloadPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-            var filePath = Path.Combine(downloadPath, fileName);
 
-            if (!Directory.Exists(downloadPath))
+            // デフォルトの保存場所（Windows のダウンロードフォルダ）
+            string defaultPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+
+            // 保存ダイアログを開く
+            string filePath = StandaloneFileBrowser.SaveFilePanel("Save File", defaultPath, fileName, "json");
+
+            if (string.IsNullOrEmpty(filePath))
             {
-                Directory.CreateDirectory(downloadPath);
+                Debug.LogWarning("保存がキャンセルされました。");
+                messageText.text = "保存がキャンセルされました";
+                return;
             }
 
-            var json = EditDataSerializer.Serialize();
-            File.WriteAllText(filePath, json, System.Text.Encoding.UTF8);
-            messageText.text = filePath + " に保存しました";
+            try
+            {
+                var json = EditDataSerializer.Serialize();
+                File.WriteAllText(filePath, json, System.Text.Encoding.UTF8);
+                Debug.Log($"ファイルを保存しました: {filePath}");
+                messageText.text = filePath + " に保存しました";
+
+                // **保存完了メッセージを表示**
+                System.Windows.Forms.MessageBox.Show("保存が完了しました！\n\n" + filePath, "保存成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            } catch (Exception e)
+            {
+                Debug.LogError($"保存中にエラーが発生しました: {e.Message}");
+                messageText.text = "保存エラー: " + e.Message;
+            }
         }
+
     }
 }

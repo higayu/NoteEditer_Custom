@@ -76,14 +76,27 @@ namespace NoteEditor.DTO
         // ファイルを開く
         public void OpenFile()
         {
-            // 拡張子フィルタ
-            var extensions = new[] {
-            new ExtensionFilter("Text Files", "json" ),
-            new ExtensionFilter("All Files", "*" ),
-        };
+            Debug.Log("譜面データ選択関数実行");
 
-            // ファイルダイアログを開く
-            var paths = StandaloneFileBrowser.OpenFilePanel("Open File", "", extensions, false);
+            if (!Loadmanager.instance.WAV_Lode_Flg)
+            {
+                System.Windows.Forms.MessageBox.Show("先に「.wav」ファイルを選択してください");
+                return;
+            }
+
+            // Windows のダウンロードフォルダの取得
+            string defaultPath = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "Downloads");
+
+            // 拡張子フィルタ
+            var extensions = new[]
+            {
+        new ExtensionFilter("Text Files", "json"),
+        new ExtensionFilter("All Files", "*")
+    };
+
+            // ファイルダイアログを開く（初期ディレクトリを `Downloads` に設定）
+            var paths = StandaloneFileBrowser.OpenFilePanel("Open File", defaultPath, extensions, false);
+
             if (paths.Length > 0 && paths[0].Length > 0)
             {
                 string filePath = paths[0];
@@ -92,6 +105,7 @@ namespace NoteEditor.DTO
                 Load(filePath);
             }
         }
+
 
 #endif
 
